@@ -1,2 +1,2 @@
-# network_Ex4
+# Network_Ex4
 creating ping and modify it into new option.
