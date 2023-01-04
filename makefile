@@ -1,10 +1,12 @@
-all: ping watchdog new_ping
+all: ping watchdog better_ping
 ping: ping.c
 	gcc ping.c -o parta
 watchdog: watchdog.c
 	gcc watchdog.c -o watchdog
-new_ping: new_ping.c
-	gcc new_ping.c -o partb
+better_ping: better_ping.c
+	gcc better_ping.c -o partb
+
+new: clean all
 
 clean:
-	rm -f *.o parta watchdog partb
+	rm -f *. ping watchdog parta partb

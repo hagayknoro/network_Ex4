@@ -20,19 +20,65 @@
 
 #define SOURCE_IP "127.0.0.1"
 
+#define SERVER_PORT 3000
+#define SERVER_IP_ADDRESS "127.0.0.1"
+
 // Checksum algo
 unsigned short calculate_checksum(unsigned short *paddress, int len);
 
+// run 2 programs using fork + exec
+// command: make clean && make all && ./partb
 int main(int count, char *argv[])
 {
+    char *args[2];
+    // compiled watchdog.c by makefile
+    args[0] = "./watchdog";
+    args[1] = NULL;
+    int status;
+    int pid = fork();
+    if (pid == 0)
+    {
+        printf("in child \n");
+        execvp(args[0], args);
+    }
+    printf("child exit status is: %d\n", status);
+
     if ( count != 2 )
     {
         printf("usage: %s <addr> \n", argv[0]);
         exit(0);
     }
-    printf("String: %s\n", argv[1]);
-
     char *DesIp = argv[1];
+
+    sleep(3);
+
+
+    //Listen to Tcp Connection
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        printf("Unable to create socket\n");
+        return -1;
+    }
+
+    struct sockaddr_in serverAddress;
+    memset(&serverAddress, 0, sizeof(serverAddress));
+
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_addr.s_addr = INADDR_ANY;
+    serverAddress.sin_port = htons(SERVER_PORT);
+    int rval = inet_pton(AF_INET, (const char *) SERVER_IP_ADDRESS, &serverAddress.sin_addr);
+    if (rval <= 0) {
+        printf("inet_pton() failed");
+        return -1;
+    }
+    if (connect(sockfd, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) == -1) {
+        printf("connect() failed with error code : %d", errno);
+    }
+    printf("connected to server\n");
+
+    struct sockaddr_in clientAddress; //
+    socklen_t clientAddressLen = sizeof(clientAddress);
+
 
     // Create raw socket for IP-RAW (make IP-header by yourself)
     int sock = -1;
@@ -52,6 +98,22 @@ int main(int count, char *argv[])
     //Create time struct
     struct timeval start, end;
     int sequence = 0;
+
+    int checkSend = -1;
+    while (checkSend < 0 )
+    {
+        int pingSend = 300;
+        checkSend = send(sockfd, &pingSend , sizeof(pingSend),0);
+        if(checkSend > 0)
+        {
+            printf("Sent start to watchdog\n");
+        }
+        else{
+            printf("Error in send\n");
+        }
+    }
+
+
 
     while(1)
     {
@@ -128,14 +190,23 @@ int main(int count, char *argv[])
 
                 printf("%s: seq=%d time=%fms\n", inet_ntoa(dest_in.sin_addr), icmp_reply->un.echo.sequence, milliseconds);
 
+                int pingSend = 256;
+                int checkSend = send(sockfd, &pingSend , sizeof(pingSend),0);
+                if(checkSend > 0)
+                {
+                    printf("watchdog, make the timer zero!!\n");
+                }
+                else{
+                    printf("Error in send\n");
+                }
+
                 break;
             }
         }
 
         sleep(1);
     }
-    // Close the raw socket descriptor.
-    close(sock);
+
     return 0;
 }
 
